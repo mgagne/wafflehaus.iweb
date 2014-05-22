@@ -27,18 +27,33 @@ class BlacklistFilter(wafflehaus.base.WafflehausBase):
             self.log.warning('Failed to parse json payload')
             return self.app
 
-        credentials = payload.get('auth', {}).get('passwordCredentials')
+        auth = payload.get('auth', {})
+        username = None
 
-        if not credentials:
+        # Identity v2.0
+        if 'passwordCredentials' in auth:
+            self.log.debug('Authenticating with Identity v2.0')
+            username = auth.get('passwordCredentials').get('username')
+        # Identity v3
+        elif 'identity' in auth:
+            self.log.debug('Authenticating with Identity v3')
+            # Password method
+            password_method = auth.get('identity').get('password')
+            if password_method:
+                self.log.debug('Authenticating with password method')
+                username = password_method.get('user', {}).get('name')
+            else:
+                self.log.warning('Unknown authentication method')
+        else:
             self.log.warning('Failed to parse auth credentials')
             return self.app
 
-        username = credentials.get('username')
         self.log.debug('User %s is authenticating', username)
         if username in self.blacklist:
-            self.log.warning('User %s is blacklisted', username)
+            self.log.info('User %s is blacklisted', username)
             return webob.exc.HTTPForbidden()
 
+        self.log.debug('User %s is not blacklisted', username)
         return self.app
 
     @webob.dec.wsgify

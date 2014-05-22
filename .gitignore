@@ -1,0 +1,13 @@
+*.DS_Store
+*.egg*
+*.pyc
+*.swo
+*.swp
+.coverage
+.tox
+AUTHORS
+build/*
+ChangeLog
+cover/*
+dist/*
+MANIFEST

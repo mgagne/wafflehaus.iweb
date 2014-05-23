@@ -1,6 +1,6 @@
 include AUTHORS
 include ChangeLog
-include *.md
+include *.rst
 
 exclude .gitignore
 global-exclude *.pyc

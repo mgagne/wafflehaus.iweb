@@ -21,13 +21,13 @@ class TestUserFilter(test_base.TestBase):
                 "project": {
                     "domain": {"id": "default"},
                     "name": "demo"}},
-                "identity": {
-                    "password": {
-                        "user": {
-                            "domain": {"id": "default"},
-                            "password": "s3cr3t",
-                            "name": "%(username)s"}},
-                "methods": ["password"]}}})
+            "identity": {
+                "password": {
+                    "user": {
+                        "domain": {"id": "default"},
+                        "password": "s3cr3t",
+                        "name": "%(username)s"}},
+            "methods": ["password"]}}})
 
     def create_request_body(self, username, version='v2.0'):
         if version == 'v3':

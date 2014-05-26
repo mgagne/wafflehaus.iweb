@@ -3,7 +3,7 @@ import json
 import webob.dec
 from tests import test_base
 
-from wafflehaus.iweb.image_filter import obsolete
+from wafflehaus.iweb.glance.image_filter import obsolete
 
 
 class FakeWebApp(object):

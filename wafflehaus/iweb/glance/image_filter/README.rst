@@ -22,7 +22,7 @@ Example Configuration
 A basic configuration for normal use::
 
     [filter:image_filter]
-    paste.filter_factory = wafflehaus.iweb.image_filter.obsolete:filter_factory
+    paste.filter_factory = wafflehaus.iweb.glance.image_filter.obsolete:filter_factory
     version_metadata = build_version
     enabled = true
 

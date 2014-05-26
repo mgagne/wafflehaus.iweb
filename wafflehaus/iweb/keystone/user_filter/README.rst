@@ -20,7 +20,7 @@ Example Configuration
 A basic configuration for normal use::
 
     [filter:user_filter]
-    paste.filter_factory = wafflehaus.iweb.user_filter.blacklist:filter_factory
+    paste.filter_factory = wafflehaus.iweb.keystone.user_filter.blacklist:filter_factory
     blacklist = admin nova
     enabled = true
 

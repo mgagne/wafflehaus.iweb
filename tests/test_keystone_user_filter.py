@@ -4,7 +4,7 @@ import json
 import webob.request
 
 from tests import test_base
-from wafflehaus.iweb.user_filter import blacklist
+from wafflehaus.iweb.keystone.user_filter import blacklist
 
 
 class TestUserFilter(test_base.TestBase):

@@ -22,5 +22,6 @@ A basic configuration for normal use::
     [filter:user_filter]
     paste.filter_factory = wafflehaus.iweb.user_filter.blacklist:filter_factory
     blacklist = admin nova
+    enabled = true
 
 This will prevent the admin and nove users from authenticating to Keystone.

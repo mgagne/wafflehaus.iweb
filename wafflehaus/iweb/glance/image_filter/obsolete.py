@@ -25,11 +25,17 @@ class ObsoleteFilter(wafflehaus.base.WafflehausBase):
         self.log.name = conf.get('log_name', __name__)
         self.log.info('Starting wafflehaus obsolete image filter middleware')
         self.version_metadata = conf.get('version_metadata', 'build_version')
+        self.roles_whitelist = conf.get('roles_whitelist', 'admin')
+        self.roles_whitelist = [r.strip()
+                                for r in self.roles_whitelist.split()]
         self.resource = conf.get('resource',
                                  'GET /images, GET /images/detail, '
                                  'GET /v1/images, GET /v1/images/detail, '
                                  'GET /v2/images, GET /v2/images/detail')
         self.resources = rf.parse_resources(self.resource)
+
+        if not self.roles_whitelist:
+            self.log.debug("No whitelisted roles.")
 
     def _image_version(self, image):
         try:
@@ -63,13 +69,40 @@ class ObsoleteFilter(wafflehaus.base.WafflehausBase):
 
         return response
 
+    def _is_whitelisted(self, req):
+        """Return True if role is whitelisted or roles cannot be determined."""
+
+        if not self.roles_whitelist:
+            return False
+
+        if not hasattr(req, 'context'):
+            self.log.info("No context found.")
+            return False
+
+        if not hasattr(req.context, 'roles'):
+            self.log.info("No roles found in context")
+            return False
+
+        roles = req.context.roles
+        self.log.debug("Received request from user with roles: %s",
+                       ' '.join(roles))
+        for key in self.roles_whitelist:
+            if key in roles:
+                self.log.debug("User role (%s) is whitelisted.", key)
+                return True
+
+        return False
+
     @webob.dec.wsgify
     def __call__(self, req):
         if not self.enabled:
             return self.app
 
         if not rf.matched_request(req, self.resources):
-            self.log.debug('Request not matching resource filters (skipping)')
+            self.log.debug("Request not matching resource filters (skipping)")
+            return self.app
+
+        if self._is_whitelisted(req):
             return self.app
 
         return self._filter_obsolete_images(req)

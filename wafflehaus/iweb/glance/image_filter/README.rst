@@ -24,7 +24,9 @@ A basic configuration for normal use::
     [filter:image_filter]
     paste.filter_factory = wafflehaus.iweb.glance.image_filter.obsolete:filter_factory
     version_metadata = build_version
+    roles_whitelist = admin superadmin
     enabled = true
 
 This will filter out images considered obsolete according to the build version
-found in the build_version metadata.
+found in the build_version metadata. Images will not be filtered for users with
+the 'admin' or 'superadmin' role.

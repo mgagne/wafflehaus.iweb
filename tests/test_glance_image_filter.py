@@ -3,9 +3,9 @@ import json
 import webob.dec
 import webob.request
 import webob.response
-from tests import test_base
 
 from wafflehaus.iweb.glance.image_filter import obsolete
+from wafflehaus import tests
 
 
 class FakeWebApp(object):
@@ -25,7 +25,7 @@ class RequestContext(object):
     pass
 
 
-class TestImageFilter(test_base.TestBase):
+class TestImageFilter(tests.TestCase):
 
     def setUp(self):
         self.conf1 = {'enabled': 'true', 'version_metadata': 'version'}

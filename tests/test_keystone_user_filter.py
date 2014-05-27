@@ -1,13 +1,13 @@
-import mock
 import json
+import mock
 
-import webob.request
+import webob.exc
 
-from tests import test_base
 from wafflehaus.iweb.keystone.user_filter import blacklist
+from wafflehaus import tests
 
 
-class TestUserFilter(test_base.TestBase):
+class TestUserFilter(tests.TestCase):
 
     def setUp(self):
         self.app = mock.Mock()

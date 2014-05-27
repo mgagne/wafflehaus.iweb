@@ -52,7 +52,7 @@ class BlacklistFilter(wafflehaus.base.WafflehausBase):
         elif 'identity' in auth:
             self.log.debug('Authenticating with Identity v3')
             # Password method
-            password_method = auth.get('identity').get('password')
+            password_method = auth.get('identity', {}).get('password')
             if password_method:
                 self.log.debug('Authenticating with password method')
                 username = password_method.get('user', {}).get('name')

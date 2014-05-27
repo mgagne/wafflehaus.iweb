@@ -29,37 +29,93 @@ class TestUserFilter(test_base.TestBase):
                         "name": "%(username)s"}},
             "methods": ["password"]}}})
 
-    def create_request_body(self, username, version='v2.0'):
-        if version == 'v3':
-            body = self.body_v2 % {'username': username}
-        else:
-            body = self.body_v3 % {'username': username}
-        return body
+    def create_filter(self, conf):
+        return blacklist.filter_factory(conf)(self.app)
 
-    def test_deny_blacklisted_user_v2(self):
-        result = blacklist.filter_factory(self.conf1)(self.app)
-        body = self.create_request_body('admin', 'v2.0')
-        resp = result.__call__.request('/v2.0/tokens', method='POST',
-                                       body=body)
+    def create_request(self, url, body):
+        req = webob.request.Request.blank(url, method='POST')
+        req.body = body
+        return req
+
+    def test_blacklist_deny_blacklisted_user_v2(self):
+        filter = self.create_filter(self.conf1)
+
+        body = self.body_v2 % {'username': 'admin'}
+        req = self.create_request('/v2.0/tokens', body=body)
+        resp = filter.__call__(req)
+
         self.assertTrue(isinstance(resp, webob.exc.HTTPException))
 
-    def test_deny_blacklisted_user_v3(self):
-        result = blacklist.filter_factory(self.conf1)(self.app)
-        body = self.create_request_body('admin', 'v3')
-        resp = result.__call__.request('/v2.0/tokens', method='POST',
-                                       body=body)
+    def test_blacklist_deny_blacklisted_user_v3(self):
+        filter = self.create_filter(self.conf1)
+
+        body = self.body_v3 % {'username': 'admin'}
+        req = self.create_request('/v3/auth/tokens', body=body)
+        resp = filter.__call__(req)
+
         self.assertTrue(isinstance(resp, webob.exc.HTTPException))
 
-    def test_allow_not_blacklisted_user_v2(self):
-        result = blacklist.filter_factory(self.conf1)(self.app)
-        body = self.create_request_body('demo', 'v2.0')
-        resp = result.__call__.request('/v2.0/tokens', method='POST',
-                                       body=body)
+    def test_blacklist_allow_not_blacklisted_user_v2(self):
+        filter = self.create_filter(self.conf1)
+
+        body = self.body_v2 % {'username': 'demo'}
+        req = self.create_request('/v2.0/tokens', body=body)
+        resp = filter.__call__(req)
+
         self.assertEqual(self.app, resp)
 
-    def test_allow_not_blacklisted_user_v3(self):
-        result = blacklist.filter_factory(self.conf1)(self.app)
-        body = self.create_request_body('demo', 'v3')
-        resp = result.__call__.request('/v3/auth/tokens', method='POST',
-                                       body=body)
+    def test_blacklist_allow_not_blacklisted_user_v3(self):
+        filter = self.create_filter(self.conf1)
+
+        body = self.body_v3 % {'username': 'demo'}
+        req = self.create_request('/v3/auth/tokens', body=body)
+        resp = filter.__call__(req)
+
+        self.assertEqual(self.app, resp)
+
+    def test_blacklist_disabled_v2(self):
+        conf = {'enabled': 'false', 'blacklist': 'admin nova'}
+        filter = self.create_filter(conf)
+
+        body = self.body_v2 % {'username': 'admin'}
+        req = self.create_request('/v2.0/tokens', body=body)
+        resp = filter.__call__(req)
+
+        self.assertEqual(self.app, resp)
+
+    def test_blacklist_no_blacklist_v2(self):
+        conf = {'enabled': 'true', 'blacklist': ''}
+        filter = self.create_filter(conf)
+
+        body = self.body_v2 % {'username': 'admin'}
+        req = self.create_request('/v2.0/tokens', body=body)
+        resp = filter.__call__(req)
+
+        self.assertEqual(self.app, resp)
+
+    def test_blacklist_unknown_auth(self):
+        filter = self.create_filter(self.conf1)
+
+        body = json.dumps({'auth': {}})
+        req = self.create_request('/v2.0/tokens', body=body)
+        resp = filter.__call__(req)
+
+        self.assertEqual(self.app, resp)
+
+    def test_blacklist_unknown_auth_v3(self):
+        filter = self.create_filter(self.conf1)
+
+        body = json.dumps({'auth': {'identity': {}}})
+        req = self.create_request('/v3/auth/tokens', body=body)
+        resp = filter.__call__(req)
+
+        self.assertEqual(self.app, resp)
+
+    def test_blacklist_junk_body(self):
+        """Ignore junk body."""
+        filter = self.create_filter(self.conf1)
+
+        req = self.create_request('/v2.0/tokens', body='junk')
+        resp = filter.__call__(req)
+
         self.assertEqual(self.app, resp)

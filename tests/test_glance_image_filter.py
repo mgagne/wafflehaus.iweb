@@ -4,7 +4,7 @@ import webob.dec
 import webob.request
 import webob.response
 
-from wafflehaus.iweb.glance.image_filter import obsolete
+from wafflehaus.iweb.glance.image_filter import visible
 from wafflehaus import tests
 
 
@@ -28,22 +28,36 @@ class RequestContext(object):
 class TestImageFilter(tests.TestCase):
 
     def setUp(self):
-        self.conf1 = {'enabled': 'true', 'version_metadata': 'version'}
-        self.conf2 = {'enabled': 'false'}
-        self.conf3 = {'enabled': 'true', 'roles_whitelist': ''}
+        self.conf1 = {'enabled': 'true',
+                      'visible_metadata': 'is_visible'}
+        self.conf2 = {'enabled': 'false',
+                      'visible_metadata': 'is_visible'}
+        self.conf3 = {'enabled': 'true',
+                      'visible_metadata': 'is_visible',
+                      'roles_whitelist': ''}
         self.body1 = json.dumps({'images': [
-            {"id": 1, "name": "CentOS", "properties": {"version": "1"}},
-            {"id": 2, "name": "CentOS", "properties": {"version": "2"}},
-            {"id": 3, "name": "Ubuntu", "properties": {"version": "1"}},
-            {"id": 4, "name": "Debian", "properties": {"version": "invalid"}},
-            {"id": 5, "name": "Debian", "properties": {"version": "invalid2"}}
+            {"id": "0e4cf274-5637-4412-957c-a1584743f41c",
+             "name": "Image A",
+             "properties": {"version": "1", "is_visible": "0"}},
+            {"id": "517f7f5f-37b5-407e-a36d-c9163d606934",
+             "name": "Image A",
+             "properties": {"version": "2", "is_visible": "1"}},
+            {"id": "51a553e6-0b9a-4cff-8e69-56363271575c",
+             "name": "Image B",
+             "properties": {"version": "1"}},
+            {"id": "1fa0356c-73a2-4306-94b9-26c04f49e9f2",
+             "name": "Image C",
+             "properties": {"is_visible": "invalid"}},
+            {"id": "cdbc922d-eabc-4b67-b21e-f88b6dd37c4b",
+             "name": "Image D",
+             "properties": {}},
         ]})
-        self.FILTERED_IMAGES_COUNT = 3
+        self.FILTERED_IMAGES_COUNT = 4
         self.ALL_IMAGES_COUNT = 5
         self.app = FakeWebApp(response=self.create_response(self.body1))
 
     def create_filter(self, conf):
-        return obsolete.filter_factory(conf)(self.app)
+        return visible.filter_factory(conf)(self.app)
 
     def create_context(self, **kwargs):
         ctxt = RequestContext()
@@ -64,7 +78,7 @@ class TestImageFilter(tests.TestCase):
         body_images = json.loads(resp.body).get("images")
         self.assertEqual(count, len(body_images))
 
-    def test_obsolete_images_disabled(self):
+    def test_visible_disabled(self):
         """Images are not filtered when disabled."""
         filter = self.create_filter(self.conf2)
 
@@ -73,7 +87,7 @@ class TestImageFilter(tests.TestCase):
 
         self.assertImageCount(self.ALL_IMAGES_COUNT, resp)
 
-    def test_obsolete_images_context_not_found(self):
+    def test_visible_context_not_found(self):
         """Images are filtered if no context is found."""
         filter = self.create_filter(self.conf1)
 
@@ -84,18 +98,19 @@ class TestImageFilter(tests.TestCase):
         self.assertNotEqual(self.app.body, resp.body)
         self.assertImageCount(self.FILTERED_IMAGES_COUNT, resp)
 
-    def test_obsolete_images_no_roles_whitelist(self):
+    def test_visible_no_roles_whitelist(self):
         """Images are filtered if no roles are whitelisted."""
         filter = self.create_filter(self.conf3)
 
-        req = self.create_request('/v1/images', method='GET')
+        ctxt = self.create_context(roles=["_member_"])
+        req = self.create_request('/v1/images', method='GET', context=ctxt)
         resp = filter.__call__(req)
 
         self.assertTrue(isinstance(resp, webob.response.Response))
         self.assertNotEqual(self.app.body, resp.body)
         self.assertImageCount(self.FILTERED_IMAGES_COUNT, resp)
 
-    def test_obsolete_images_roles_not_found(self):
+    def test_visible_roles_not_found(self):
         """Images are filtered if no context is found."""
         filter = self.create_filter(self.conf1)
 
@@ -107,7 +122,7 @@ class TestImageFilter(tests.TestCase):
         self.assertNotEqual(self.app.body, resp.body)
         self.assertImageCount(self.FILTERED_IMAGES_COUNT, resp)
 
-    def test_obsolete_images_are_filtered_v1(self):
+    def test_visible_images_are_filtered_v1(self):
         """Images are filtered (Glance v1)."""
         filter = self.create_filter(self.conf1)
 
@@ -119,7 +134,7 @@ class TestImageFilter(tests.TestCase):
         self.assertNotEqual(self.app.body, resp.body)
         self.assertImageCount(self.FILTERED_IMAGES_COUNT, resp)
 
-    def test_obsolete_images_are_filtered_v2(self):
+    def test_visible_images_are_filtered_v2(self):
         """Images are filtered (Glance v2)."""
         filter = self.create_filter(self.conf1)
 
@@ -131,7 +146,7 @@ class TestImageFilter(tests.TestCase):
         self.assertNotEqual(self.app.body, resp.body)
         self.assertImageCount(self.FILTERED_IMAGES_COUNT, resp)
 
-    def test_obsolete_images_roles_whitelist_v1(self):
+    def test_visible_roles_whitelist_v1(self):
         """Images are not filtered for whitelisted roles (Glance v1)."""
         filter = self.create_filter(self.conf1)
 
@@ -141,7 +156,7 @@ class TestImageFilter(tests.TestCase):
 
         self.assertImageCount(self.ALL_IMAGES_COUNT, resp)
 
-    def test_obsolete_images_are_not_filtered_for_admin_v2(self):
+    def test_visible_roles_whitelist_v2(self):
         """Images are not filtered for whitelisted roles (Glance v2)."""
         filter = self.create_filter(self.conf1)
 

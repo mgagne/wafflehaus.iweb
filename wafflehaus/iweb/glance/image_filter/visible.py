@@ -18,13 +18,13 @@ import wafflehaus.base
 import wafflehaus.resource_filter as rf
 
 
-class ObsoleteFilter(wafflehaus.base.WafflehausBase):
+class VisibleFilter(wafflehaus.base.WafflehausBase):
 
     def __init__(self, app, conf):
-        super(ObsoleteFilter, self).__init__(app, conf)
+        super(VisibleFilter, self).__init__(app, conf)
         self.log.name = conf.get('log_name', __name__)
-        self.log.info('Starting wafflehaus obsolete image filter middleware')
-        self.version_metadata = conf.get('version_metadata', 'build_version')
+        self.log.info('Starting wafflehaus visible image filter middleware')
+        self.visible_metadata = conf.get('visible_metadata', 'visible')
         self.roles_whitelist = conf.get('roles_whitelist', 'admin')
         self.roles_whitelist = [r.strip()
                                 for r in self.roles_whitelist.split()]
@@ -37,34 +37,17 @@ class ObsoleteFilter(wafflehaus.base.WafflehausBase):
         if not self.roles_whitelist:
             self.log.debug("No whitelisted roles.")
 
-    def _image_version(self, image):
-        try:
-            return int(
-                image.get('properties', {}).get(self.version_metadata, 0))
-        except ValueError:
-            return 0
+    def _is_visible(self, image):
+        return image.get('properties', {}).get(
+            self.visible_metadata, "1") != "0"
 
-    def _filter_obsolete_images(self, req):
-        self.log.debug('Filtering obsolete images')
+    def _filter_non_visible_images(self, req):
+        self.log.debug('Filtering non-visible images')
         response = req.get_response(self.app)
         body = response.json
         images = body.get('images')
 
-        latest_images = {}
-        for image in list(images):
-            name = image['name']
-            if name not in latest_images:
-                latest_images[name] = image
-                continue
-            latest_version = self._image_version(latest_images[name])
-            current_version = self._image_version(image)
-            if current_version > latest_version:
-                images.remove(latest_images[name])
-                latest_images[name] = image
-            else:
-                images.remove(image)
-
-        body['images'] = images
+        body['images'] = [i for i in images if self._is_visible(i)]
         response.json = body
 
         return response
@@ -105,7 +88,7 @@ class ObsoleteFilter(wafflehaus.base.WafflehausBase):
         if self._is_whitelisted(req):
             return self.app
 
-        return self._filter_obsolete_images(req)
+        return self._filter_non_visible_images(req)
 
 
 def filter_factory(global_conf, **local_conf):
@@ -113,6 +96,6 @@ def filter_factory(global_conf, **local_conf):
     conf = global_conf.copy()
     conf.update(local_conf)
 
-    def obsolete(app):
-        return ObsoleteFilter(app, conf)
-    return obsolete
+    def visible(app):
+        return VisibleFilter(app, conf)
+    return visible
